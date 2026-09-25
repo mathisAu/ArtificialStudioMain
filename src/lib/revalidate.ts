@@ -5,25 +5,17 @@ import { revalidatePath } from "next/cache";
 /**
  * Cache-invalidatie over beide omgevingen heen.
  *
- * Bijna elk gegeven bestaat op twee plekken: intern op `/feedback` en voor de
- * klant op `/portaal/feedback`. Wordt alleen het interne pad ververst, dan ziet
+ * Bijna elk gegeven bestaat op twee plekken: intern op `/projecten` en voor de
+ * klant op `/portaal/projecten`. Wordt alleen het interne pad ververst, dan ziet
  * de klant de wijziging pas na een harde refresh — dat is de oorzaak van
  * "status verandert niet" en "de nieuwe update is niet te openen".
  */
-const MIRRORED_SEGMENTS = new Set([
-  "acties",
-  "documenten",
-  "facturen",
-  "feedback",
-  "notificaties",
-  "projecten",
-  "vragen",
-]);
+const MIRRORED_SEGMENTS = new Set(["acties", "projecten"]);
 
 /**
  * Ververst een pad in de interne omgeving én het bijbehorende portaalpad.
  *
- * `paths` zijn interne paden (`/feedback/123`). Lege waarden worden genegeerd,
+ * `paths` zijn interne paden (`/projecten/123`). Lege waarden worden genegeerd,
  * zodat een optionele `project_id` direct doorgegeven kan worden.
  */
 export function revalidateShared(...paths: (string | null | undefined)[]) {

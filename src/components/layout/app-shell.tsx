@@ -1,17 +1,12 @@
 "use client";
 
 import {
-  Bell,
   Building2,
   CircleCheck,
-  FileText,
   FolderKanban,
   LayoutDashboard,
   LogOut,
   Menu,
-  MessageCircleQuestion,
-  MessageSquare,
-  Receipt,
   Settings,
   UserRound,
   Users,
@@ -24,7 +19,6 @@ import { useState, type ReactNode } from "react";
 
 import type { NavItem } from "./nav-config";
 import { Logo } from "./logo";
-import { NotificationBadge } from "./notification-badge";
 import { ThemeToggle } from "./theme-toggle";
 import { Avatar } from "@/components/ui/misc";
 import { USER_ROLE } from "@/lib/labels";
@@ -37,11 +31,6 @@ const ICONS: Record<string, LucideIcon> = {
   FolderKanban,
   CircleCheck,
   Building2,
-  MessageSquare,
-  MessageCircleQuestion,
-  FileText,
-  Bell,
-  Receipt,
   Settings,
   UserRound,
   Users,
@@ -66,7 +55,6 @@ export function AppShell({
   children,
   accountHref,
   signOut,
-  unreadNotifications = 0,
   theme = "systeem",
 }: {
   nav: NavItem[];
@@ -75,8 +63,6 @@ export function AppShell({
   /** Pad naar de eigen accountpagina; verschilt per omgeving. */
   accountHref: string;
   signOut: () => Promise<void>;
-  /** Startwaarde voor de notificatieteller; die werkt zichzelf daarna bij. */
-  unreadNotifications?: number;
   /** Themavoorkeur uit de cookie (§37). */
   theme?: Theme;
 }) {
@@ -141,12 +127,6 @@ export function AppShell({
               >
                 <Icon className="h-4 w-4 shrink-0" strokeWidth={active ? 2.2 : 1.8} />
                 <span className="truncate">{item.label}</span>
-                {item.badgeKey === "notifications" ? (
-                  <NotificationBadge
-                    userId={user.id}
-                    initialCount={unreadNotifications}
-                  />
-                ) : null}
               </Link>
             );
           })}

@@ -2,7 +2,6 @@ import { FolderKanban } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { ProjectRequestModal } from "./project-request-modal";
 import { StatusBadge } from "@/components/ui/badge";
 import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState, PageHeader, Progress } from "@/components/ui/misc";
@@ -39,16 +38,11 @@ export default async function PortalProjectsPage() {
       <PageHeader
         title="Projecten"
         description="Al uw lopende en afgeronde projecten."
-        action={<ProjectRequestModal />}
       />
 
       <Card>
         <CardHeader title="Lopend" />
-        <ProjectRows
-          projects={active}
-          emptyTitle="Geen lopende projecten"
-          emptyDescription="Wilt u iets nieuws laten bouwen? Vraag een project aan via de knop rechtsboven."
-        />
+        <ProjectRows projects={active} emptyTitle="Geen lopende projecten" />
       </Card>
 
       <Card>
