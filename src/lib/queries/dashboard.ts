@@ -63,81 +63,70 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
   startOfMonth.setHours(0, 0, 0, 0);
   const today = new Date().toISOString().slice(0, 10);
 
-  const countProjects = (statuses: string[]) =>
-    supabase
-      .from("projects")
-      .select("id", { count: "exact", head: true })
-      .eq("is_archived", false)
-      .in("status", statuses);
+  // Alles tegelijk, in één ronde naar de database. Projecten en hun kerncijfers
+  // halen we zonder filter op en verdelen we hieronder in het geheugen over de
+  // tellers en lijsten. Dat scheelt zes aparte tel-queries én een tweede ronde
+  // voor de statistieken, die eerst op de projectlijst moest wachten.
+  const [projectsResult, statsResult, openTasks, overdueTasks, myTasksResult, activityResult] =
+    await Promise.all([
+      supabase
+        .from("projects")
+        .select(
+          "id, code, name, status, deadline, progress, updated_at, is_archived, company:companies(id, name)",
+        )
+        .limit(1000),
+      supabase.from("project_stats").select("*"),
+      supabase
+        .from("tasks")
+        .select("id", { count: "exact", head: true })
+        .neq("status", "done"),
+      supabase
+        .from("tasks")
+        .select("id", { count: "exact", head: true })
+        .neq("status", "done")
+        .lt("due_date", today),
 
-  const [
-    activeProjects,
-    inDevelopment,
-    inTesting,
-    waitingOnClient,
-    openTasks,
-    overdueTasks,
-    completedThisMonth,
-    myTasksResult,
-    projectsResult,
-    activityResult,
-  ] = await Promise.all([
-    countProjects(ACTIVE_PROJECT_STATUSES),
-    countProjects(["in_development"]),
-    countProjects(["internal_test", "client_test"]),
-    countProjects(["waiting_client"]),
-    supabase
-      .from("tasks")
-      .select("id", { count: "exact", head: true })
-      .neq("status", "done"),
-    supabase
-      .from("tasks")
-      .select("id", { count: "exact", head: true })
-      .neq("status", "done")
-      .lt("due_date", today),
-    supabase
-      .from("projects")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "completed")
-      .gte("updated_at", startOfMonth.toISOString()),
+      // Mijn taken: alles wat nog niet af is, deadline eerst.
+      supabase
+        .from("tasks")
+        .select(TASK_SELECT)
+        .eq("assignee_id", userId)
+        .neq("status", "done")
+        .order("due_date", { ascending: true, nullsFirst: false })
+        .limit(8),
 
-    // Mijn taken: alles wat nog niet af is, deadline eerst.
-    supabase
-      .from("tasks")
-      .select(TASK_SELECT)
-      .eq("assignee_id", userId)
-      .neq("status", "done")
-      .order("due_date", { ascending: true, nullsFirst: false })
-      .limit(8),
+      supabase
+        .from("activities")
+        .select(
+          "id, project_id, company_id, actor_id, type, description, entity_type, entity_id, visible_to_client, created_at, actor:users(full_name), project:projects(name)",
+        )
+        .order("created_at", { ascending: false })
+        .limit(12),
+    ]);
 
-    supabase
-      .from("projects")
-      .select(
-        "id, code, name, status, deadline, progress, updated_at, company:companies(id, name)",
-      )
-      .eq("is_archived", false)
-      .in("status", ACTIVE_PROJECT_STATUSES)
-      .order("deadline", { ascending: true, nullsFirst: false })
-      .limit(100),
+  const allProjects = projectsResult.data ?? [];
+  const live = allProjects.filter((p) => !p.is_archived);
+  const countStatus = (statuses: string[]) =>
+    live.filter((p) => statuses.includes(p.status)).length;
 
-    supabase
-      .from("activities")
-      .select(
-        "id, project_id, company_id, actor_id, type, description, entity_type, entity_id, visible_to_client, created_at, actor:users(full_name), project:projects(name)",
-      )
-      .order("created_at", { ascending: false })
-      .limit(12),
-  ]);
+  // Deadline oplopend, projecten zonder deadline onderaan.
+  const byDeadline = (
+    a: { deadline: string | null },
+    b: { deadline: string | null },
+  ) => {
+    if (a.deadline === b.deadline) return 0;
+    if (a.deadline === null) return 1;
+    if (b.deadline === null) return -1;
+    return a.deadline.localeCompare(b.deadline);
+  };
 
-  const projects = projectsResult.data ?? [];
-  const projectIds = projects.map((p) => p.id);
-
-  const { data: statsRows } = projectIds.length
-    ? await supabase.from("project_stats").select("*").in("project_id", projectIds)
-    : { data: [] as ProjectStats[] };
+  const projects = live
+    .filter((p) => ACTIVE_PROJECT_STATUSES.includes(p.status))
+    .sort(byDeadline)
+    .slice(0, 100);
 
   const statsById = new Map<string, ProjectStats>(
-    (statsRows ?? []).map((row) => [row.project_id, row as ProjectStats]),
+    (statsResult.data ?? []).map((row) => [row.project_id, row as ProjectStats]),
   );
 
   // Projecten die aandacht nodig hebben (§4).
@@ -191,13 +180,15 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
 
   return {
     kpis: {
-      activeProjects: activeProjects.count ?? 0,
-      inDevelopment: inDevelopment.count ?? 0,
-      inTesting: inTesting.count ?? 0,
-      waitingOnClient: waitingOnClient.count ?? 0,
+      activeProjects: countStatus(ACTIVE_PROJECT_STATUSES),
+      inDevelopment: countStatus(["in_development"]),
+      inTesting: countStatus(["internal_test", "client_test"]),
+      waitingOnClient: countStatus(["waiting_client"]),
       openTasks: openTasks.count ?? 0,
       overdueTasks: overdueTasks.count ?? 0,
-      completedThisMonth: completedThisMonth.count ?? 0,
+      completedThisMonth: allProjects.filter(
+        (p) => p.status === "completed" && p.updated_at >= startOfMonth.toISOString(),
+      ).length,
     },
     myTasks: (myTasksResult.data ?? []) as unknown as TaskWithRelations[],
     attention: attention.slice(0, 8),

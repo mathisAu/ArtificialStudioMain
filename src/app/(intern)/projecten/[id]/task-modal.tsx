@@ -1,7 +1,6 @@
 "use client";
 
 import { ListChecks, Plus, Trash2 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { toast } from "sonner";
@@ -50,7 +49,6 @@ export function TaskModal({
   defaultStatus?: TaskStatus;
   defaultProjectId?: string;
 }) {
-  const router = useRouter();
   const isEdit = Boolean(task);
   const effectiveProjectId = task?.project_id ?? projectId ?? "";
 
@@ -59,7 +57,6 @@ export function TaskModal({
     (result) => {
       toast.success(result.success ?? "Opgeslagen.");
       onClose();
-      router.refresh();
     },
   );
 
@@ -246,7 +243,6 @@ function SubtaskEditor({
   projectId: string;
   subtasks: TaskSubtask[];
 }) {
-  const router = useRouter();
   const [subtasks, setSubtasks] = useSyncedState(initial);
   const [title, setTitle] = useState("");
   const [busy, setBusy] = useState(false);
@@ -267,7 +263,6 @@ function SubtaskEditor({
     await addSubtaskAction(formData);
     setTitle("");
     setBusy(false);
-    router.refresh();
   }
 
   async function toggle(id: string, isDone: boolean) {
@@ -278,9 +273,7 @@ function SubtaskEditor({
     if ("error" in result && result.error) {
       setSubtasks(previous);
       toast.error(result.error);
-      return;
     }
-    router.refresh();
   }
 
   return (

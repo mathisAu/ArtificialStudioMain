@@ -23,6 +23,10 @@ export default async function CompaniesPage({
   const user = await requireInternal();
   const params = await searchParams;
 
+  // De tabelgegevens starten meteen, naast de lijst met verantwoordelijken, in
+  // plaats van pas als die klaar is. Dat scheelt een hele ronde naar de database.
+  const table = loadCompanies(params);
+
   const supabase = await createClient();
   const { data: managers } = await supabase
     .from("users")
@@ -61,19 +65,16 @@ export default async function CompaniesPage({
         key={`${params.q ?? ""}|${params.status ?? ""}|${params.manager ?? ""}`}
         fallback={<TableSkeleton cols={7} />}
       >
-        <CompaniesTable params={params} role={user.role} />
+        <CompaniesTable data={table} params={params} role={user.role} />
       </Suspense>
     </>
   );
 }
 
-async function CompaniesTable({
-  params,
-  role,
-}: {
-  params: { q?: string; status?: string; manager?: string };
-  role: UserRole;
-}) {
+type CompanyFilters = { q?: string; status?: string; manager?: string };
+
+/** Klanten en hun kerncijfers, in één ronde. */
+async function loadCompanies(params: CompanyFilters) {
   const supabase = await createClient();
 
   let query = supabase
@@ -89,28 +90,40 @@ async function CompaniesTable({
   if (params.status) query = query.eq("status", params.status);
   if (params.manager) query = query.eq("account_manager_id", params.manager);
 
-  const { data: companies, error } = await query;
+  const [{ data: companies, error }, { data: statsRows }] = await Promise.all([
+    query,
+    supabase.from("company_stats").select("*"),
+  ]);
+
+  return {
+    rows: companies ?? [],
+    error: error?.message ?? null,
+    statsById: new Map<string, CompanyStats>(
+      (statsRows ?? []).map((row) => [row.company_id, row as CompanyStats]),
+    ),
+  };
+}
+
+async function CompaniesTable({
+  data,
+  params,
+  role,
+}: {
+  data: ReturnType<typeof loadCompanies>;
+  params: CompanyFilters;
+  role: UserRole;
+}) {
+  const { rows, error, statsById } = await data;
 
   if (error) {
     return (
       <EmptyState
         title="Klanten konden niet worden geladen"
-        description={error.message}
+        description={error}
         icon={<Building2 className="h-5 w-5" />}
       />
     );
   }
-
-  const rows = companies ?? [];
-  const ids = rows.map((c) => c.id);
-
-  const { data: statsRows } = ids.length
-    ? await supabase.from("company_stats").select("*").in("company_id", ids)
-    : { data: [] as CompanyStats[] };
-
-  const statsById = new Map<string, CompanyStats>(
-    (statsRows ?? []).map((row) => [row.company_id, row as CompanyStats]),
-  );
 
   if (rows.length === 0) {
     // Een developer ziet alleen klanten van projecten waaraan hij werkt (§2).
