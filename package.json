@@ -12,6 +12,7 @@
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",
     "db:push": "supabase db push",
+    "seed:demo": "node scripts/seed-demo.mjs",
     "db:types": "supabase gen types typescript --linked > src/lib/database.types.ts",
     "test:rls": "docker exec -i supabase_db_artificial-studio-pm psql -U postgres -d postgres -q -f - < supabase/tests/rls_test.sql",
     "test:outbox": "docker exec -i supabase_db_artificial-studio-pm psql -U postgres -d postgres -q -f - < supabase/tests/outbox_test.sql",

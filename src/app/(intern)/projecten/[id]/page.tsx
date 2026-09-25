@@ -38,6 +38,7 @@ import {
   PROJECT_STATUS,
   PROJECT_TYPE,
 } from "@/lib/labels";
+import { BOARD_TASK_SELECT, toBoardTask } from "@/lib/queries/tasks";
 import { createClient } from "@/lib/supabase/server";
 import type {
   Activity,
@@ -62,8 +63,8 @@ export async function generateMetadata({
 }
 
 const TABS = [
-  "overzicht",
   "taken",
+  "overzicht",
   "updates",
   "acties",
   "notities",
@@ -89,7 +90,8 @@ export default async function ProjectDetailPage({
   const user = await requireInternal();
   const { id } = await params;
   const { tab: rawTab } = await searchParams;
-  const tab: Tab = TABS.includes(rawTab as Tab) ? (rawTab as Tab) : "overzicht";
+  // Het takenbord is de startweergave: klik op een project en sleep direct taken.
+  const tab: Tab = TABS.includes(rawTab as Tab) ? (rawTab as Tab) : "taken";
 
   const supabase = await createClient();
 
@@ -240,8 +242,8 @@ export default async function ProjectDetailPage({
         basePath={`/projecten/${id}`}
         active={tab}
         tabs={[
+          { value: "taken", label: "Bord", count: openTaskCount },
           { value: "overzicht", label: "Overzicht" },
-          { value: "taken", label: "Taken", count: openTaskCount },
           { value: "updates", label: "Updates", count: updateCount ?? 0 },
           { value: "acties", label: "Acties", count: stats?.open_client_actions ?? 0 },
           { value: "notities", label: "Notities", count: noteCount ?? 0 },
@@ -504,23 +506,13 @@ async function TasksTab({
 
   const { data: taskRows } = await supabase
     .from("tasks")
-    .select(
-      "*, assignee:users!tasks_assignee_id_fkey(id, full_name, avatar_url), subtasks(id, is_done)",
-    )
+    .select(BOARD_TASK_SELECT)
     .eq("project_id", projectId)
     .order("position");
 
-  const tasks: BoardTask[] = (taskRows ?? []).map((task) => {
-    const assignee = one(task.assignee as { full_name?: string; avatar_url?: string } | null);
-    const subtasks = (task.subtasks ?? []) as { id: string; is_done: boolean }[];
-    return {
-      ...(task as unknown as BoardTask),
-      assigneeName: assignee?.full_name ?? null,
-      assigneeAvatar: assignee?.avatar_url ?? null,
-      subtaskTotal: subtasks.length,
-      subtaskDone: subtasks.filter((s) => s.is_done).length,
-    };
-  });
+  const tasks: BoardTask[] = (taskRows ?? []).map((task) =>
+    toBoardTask(task as unknown as Record<string, unknown>),
+  );
 
   return (
     <TaskBoard projectId={projectId} tasks={tasks} members={members} canEdit={canEdit} />

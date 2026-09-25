@@ -17,7 +17,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { moveTaskAction } from "./actions";
-import { TaskModal } from "./task-modal";
+import { TaskModal, type TaskSubtask } from "./task-modal";
 import { Badge, StatusBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, EmptyState } from "@/components/ui/misc";
@@ -32,16 +32,28 @@ export interface BoardTask extends Task {
   assigneeAvatar: string | null;
   subtaskTotal: number;
   subtaskDone: number;
+  subtasks: TaskSubtask[];
+  /** Alleen gevuld op het Board over alle projecten. */
+  projectName?: string | null;
 }
 
-/** Takenmodule met bord- en lijstweergave en drag & drop (§11). */
+/**
+ * Takenmodule met bord- en lijstweergave en drag & drop (§11).
+ *
+ * Werkt voor één project (`projectId`) en voor het Board over alle projecten
+ * (`projects`): in dat geval kiest de gebruiker bij een nieuwe taak het project.
+ */
 export function TaskBoard({
   projectId,
+  projects,
+  defaultProjectId,
   tasks: initialTasks,
   members,
   canEdit,
 }: {
-  projectId: string;
+  projectId?: string;
+  projects?: { id: string; name: string }[];
+  defaultProjectId?: string;
   tasks: BoardTask[];
   members: UserSummary[];
   canEdit: boolean;
@@ -51,8 +63,12 @@ export function TaskBoard({
   const [tasks, setTasks] = useSyncedState(initialTasks);
   const [view, setView] = useState<"bord" | "lijst">("bord");
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [editing, setEditing] = useState<BoardTask | null>(null);
+  // Alleen het id bewaren: zo blijft de modal na een refresh de nieuwste versie
+  // van de taak tonen, inclusief afgevinkte subtaken.
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [creatingIn, setCreatingIn] = useState<TaskStatus | null>(null);
+  const editing = tasks.find((t) => t.id === editingId) ?? null;
+  const showProject = Boolean(projects);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -149,7 +165,11 @@ export function TaskBoard({
           />
         </div>
       ) : view === "lijst" ? (
-        <TaskTable tasks={tasks} onOpen={canEdit ? setEditing : undefined} />
+        <TaskTable
+          tasks={tasks}
+          showProject={showProject}
+          onOpen={canEdit ? (task) => setEditingId(task.id) : undefined}
+        />
       ) : (
         // Vaste id: zie de toelichting in project-board.tsx.
         <DndContext
@@ -167,8 +187,9 @@ export function TaskBoard({
                   .filter((t) => t.status === status)
                   .sort((a, b) => a.position - b.position)}
                 canEdit={canEdit}
+                showProject={showProject}
                 onAdd={() => setCreatingIn(status)}
-                onOpen={canEdit ? setEditing : undefined}
+                onOpen={canEdit ? (task) => setEditingId(task.id) : undefined}
               />
             ))}
           </div>
@@ -176,7 +197,7 @@ export function TaskBoard({
           <DragOverlay dropAnimation={null}>
             {activeTask ? (
               <div className="rotate-2 opacity-95">
-                <TaskCard task={activeTask} canEdit={false} />
+                <TaskCard task={activeTask} canEdit={false} showProject={showProject} />
               </div>
             ) : null}
           </DragOverlay>
@@ -186,12 +207,15 @@ export function TaskBoard({
       <TaskModal
         open={Boolean(editing) || Boolean(creatingIn)}
         onClose={() => {
-          setEditing(null);
+          setEditingId(null);
           setCreatingIn(null);
         }}
         projectId={projectId}
+        projects={projects}
+        defaultProjectId={defaultProjectId}
         members={members}
         task={editing}
+        subtasks={editing?.subtasks ?? []}
         defaultStatus={creatingIn ?? "todo"}
       />
     </div>
@@ -202,12 +226,14 @@ function TaskColumn({
   status,
   tasks,
   canEdit,
+  showProject,
   onAdd,
   onOpen,
 }: {
   status: TaskStatus;
   tasks: BoardTask[];
   canEdit: boolean;
+  showProject: boolean;
   onAdd: () => void;
   onOpen?: (task: BoardTask) => void;
 }) {
@@ -245,7 +271,13 @@ function TaskColumn({
         )}
       >
         {tasks.map((task) => (
-          <TaskCard key={task.id} task={task} canEdit={canEdit} onOpen={onOpen} />
+          <TaskCard
+            key={task.id}
+            task={task}
+            canEdit={canEdit}
+            showProject={showProject}
+            onOpen={onOpen}
+          />
         ))}
         {tasks.length === 0 ? (
           <p className="px-2 py-5 text-center text-xs text-subtle-foreground">Leeg</p>
@@ -258,10 +290,12 @@ function TaskColumn({
 function TaskCard({
   task,
   canEdit,
+  showProject = false,
   onOpen,
 }: {
   task: BoardTask;
   canEdit: boolean;
+  showProject?: boolean;
   onOpen?: (task: BoardTask) => void;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
@@ -301,6 +335,11 @@ function TaskCard({
           <span className="block text-[13px] font-medium leading-snug text-foreground line-clamp-3">
             {task.title}
           </span>
+          {showProject && task.projectName ? (
+            <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
+              {task.projectName}
+            </span>
+          ) : null}
         </button>
       </div>
 
@@ -343,9 +382,11 @@ function TaskCard({
 
 function TaskTable({
   tasks,
+  showProject,
   onOpen,
 }: {
   tasks: BoardTask[];
+  showProject: boolean;
   onOpen?: (task: BoardTask) => void;
 }) {
   return (
@@ -354,6 +395,7 @@ function TaskTable({
         <thead>
           <tr>
             <Th>Taak</Th>
+            {showProject ? <Th>Project</Th> : null}
             <Th>Toegewezen aan</Th>
             <Th>Prioriteit</Th>
             <Th>Deadline</Th>
@@ -380,6 +422,9 @@ function TaskTable({
                     </span>
                   ) : null}
                 </Td>
+                {showProject ? (
+                  <Td className="text-muted-foreground">{task.projectName ?? "—"}</Td>
+                ) : null}
                 <Td className="text-muted-foreground">{task.assigneeName ?? "—"}</Td>
                 <Td>
                   <StatusBadge map={PRIORITY} value={task.priority} />

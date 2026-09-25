@@ -35,7 +35,12 @@ export function revalidateShared(...paths: (string | null | undefined)[]) {
     if (MIRRORED_SEGMENTS.has(segment)) mark(`/portaal${path}`);
   }
 
-  // De overzichtstellers op beide startpagina's lopen anders achter.
+  // De overzichtstellers op beide startpagina's lopen anders achter, net als de
+  // pagina's die dezelfde gegevens over alle projecten heen tonen.
   mark("/dashboard");
   mark("/portaal");
+  mark("/board");
+  mark("/kalender");
+  mark("/goedkeuringen");
+  mark("/rapporten");
 }
