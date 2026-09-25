@@ -44,6 +44,13 @@ export const INTERNAL_NAV: NavItem[] = [
     roles: ["admin", "projectmanager"],
     section: "Klanten",
   },
+  {
+    href: "/klantportaal",
+    label: "Klantportaal",
+    icon: "Globe",
+    roles: ["admin", "projectmanager"],
+    section: "Klanten",
+  },
 
   { href: "/account", label: "Mijn account", icon: "UserRound", section: "Beheer" },
   { href: "/team", label: "Team", icon: "Users", section: "Beheer" },

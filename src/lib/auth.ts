@@ -1,6 +1,7 @@
 import "server-only";
 
 import { cache } from "react";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { isInternalRole } from "./labels";
@@ -114,14 +115,47 @@ export async function requireAdmin(): Promise<SessionUser> {
   return user;
 }
 
-/** Klantportaal: uitsluitend de rol client, met een gekoppelde organisatie. */
-export async function requireClient(): Promise<SessionUser & { companyId: string }> {
+/** Cookie waarmee een beheerder het portaal van één klant als voorbeeld bekijkt. */
+export const PORTAL_PREVIEW_COOKIE = "portal_preview";
+
+export type PortalUser = SessionUser & {
+  companyId: string;
+  /** Waar als een beheerder het portaal van deze klant bekijkt. */
+  preview?: boolean;
+};
+
+const previewCompany = cache(async (id: string) => {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("companies")
+    .select("id, name")
+    .eq("id", id)
+    .maybeSingle();
+  return data;
+});
+
+/**
+ * Klantportaal: de rol client, met een gekoppelde organisatie.
+ *
+ * Admins en projectmanagers komen er alleen in als ze bewust een voorbeeld van
+ * één klant hebben geopend. De portaalpagina's filteren op `companyId`, dus zij
+ * zien precies wat die klant ziet. Alle andere rollen gaan terug naar het dashboard.
+ */
+export async function requireClient(): Promise<PortalUser> {
   const user = await requireUser();
+
+  if (isManager(user.role)) {
+    const id = (await cookies()).get(PORTAL_PREVIEW_COOKIE)?.value;
+    const company = id ? await previewCompany(id) : null;
+    if (!company) redirect("/klantportaal");
+    return { ...user, companyId: company.id, companyName: company.name, preview: true };
+  }
+
   if (user.role !== "client") redirect("/dashboard");
   if (!user.companyId) {
     redirect("/login?fout=geen-organisatie");
   }
-  return user as SessionUser & { companyId: string };
+  return user as PortalUser;
 }
 
 export function isManager(role: UserRole): boolean {
