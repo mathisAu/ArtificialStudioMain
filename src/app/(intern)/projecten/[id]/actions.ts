@@ -20,6 +20,18 @@ export interface TaskActionState {
   id?: string;
 }
 
+/**
+ * Een taak komt op meerdere plekken terug: het projectbord, het Board over alle
+ * projecten, de kalender, de rapporten en het dashboard.
+ */
+function revalidateTaskViews(projectId: string | null | undefined) {
+  if (projectId) revalidatePath(`/projecten/${projectId}`);
+  revalidatePath("/board");
+  revalidatePath("/kalender");
+  revalidatePath("/rapporten");
+  revalidatePath("/dashboard");
+}
+
 const TASK_STATUSES = ["todo", "in_progress", "review", "blocked", "done"] as const;
 const PRIORITIES = ["low", "normal", "high", "urgent"] as const;
 
@@ -87,8 +99,7 @@ export async function createTaskAction(
     };
   }
 
-  revalidatePath(`/projecten/${parsed.data.project_id}`);
-  revalidatePath("/dashboard");
+  revalidateTaskViews(parsed.data.project_id);
   return { success: "Taak aangemaakt.", id: data.id };
 }
 
@@ -109,7 +120,7 @@ export async function updateTaskAction(
 
   if (error) return { error: "De wijzigingen konden niet worden opgeslagen." };
 
-  revalidatePath(`/projecten/${parsed.data.project_id}`);
+  revalidateTaskViews(parsed.data.project_id);
   return { success: "Taak bijgewerkt.", id };
 }
 
@@ -137,8 +148,7 @@ export async function moveTaskAction(
     return { error: "Je hebt geen rechten om deze taak te verplaatsen." };
   }
 
-  revalidatePath(`/projecten/${data.project_id}`);
-  revalidatePath("/dashboard");
+  revalidateTaskViews(data.project_id);
   return { success: "Taak verplaatst." };
 }
 
@@ -152,7 +162,7 @@ export async function deleteTaskAction(formData: FormData) {
   const supabase = await createClient();
   await supabase.from("tasks").delete().eq("id", id);
 
-  revalidatePath(`/projecten/${projectId}`);
+  revalidateTaskViews(projectId);
 }
 
 // -----------------------------------------------------------------------------
@@ -181,7 +191,7 @@ export async function addSubtaskAction(formData: FormData) {
     position: (last?.position ?? 0) + 1,
   });
 
-  revalidatePath(`/projecten/${projectId}`);
+  revalidateTaskViews(projectId);
 }
 
 export async function toggleSubtaskAction(subtaskId: string, isDone: boolean) {
@@ -193,5 +203,8 @@ export async function toggleSubtaskAction(subtaskId: string, isDone: boolean) {
     .update({ is_done: isDone })
     .eq("id", subtaskId);
 
-  return error ? { error: "Kon de subtaak niet bijwerken." } : { success: true };
+  if (error) return { error: "Kon de subtaak niet bijwerken." };
+
+  revalidateTaskViews(null);
+  return { success: true };
 }

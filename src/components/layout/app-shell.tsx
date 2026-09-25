@@ -2,12 +2,16 @@
 
 import {
   Building2,
+  CalendarDays,
+  ChartColumn,
   CircleCheck,
   FolderKanban,
   LayoutDashboard,
+  LayoutTemplate,
   LogOut,
   Menu,
   Settings,
+  SquareKanban,
   UserRound,
   Users,
   X,
@@ -28,8 +32,12 @@ import { cn } from "@/lib/utils";
 
 const ICONS: Record<string, LucideIcon> = {
   LayoutDashboard,
+  SquareKanban,
+  LayoutTemplate,
+  CalendarDays,
   FolderKanban,
   CircleCheck,
+  ChartColumn,
   Building2,
   Settings,
   UserRound,
@@ -107,27 +115,34 @@ export function AppShell({
         </div>
 
         <nav className="flex-1 space-y-0.5 overflow-y-auto scrollbar-thin p-2.5">
-          {nav.map((item) => {
+          {nav.map((item, index) => {
             const Icon = ICONS[item.icon] ?? LayoutDashboard;
             const active =
               pathname === item.href ||
               (item.href !== "/portaal" && pathname.startsWith(`${item.href}/`));
+            const showSection = item.section && item.section !== nav[index - 1]?.section;
 
             return (
-              <Link
-                key={item.href}
-                href={item.href}
-                aria-current={active ? "page" : undefined}
-                className={cn(
-                  "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] font-medium transition-colors",
-                  active
-                    ? "bg-accent-soft text-accent"
-                    : "text-muted-foreground hover:bg-surface-muted hover:text-foreground",
-                )}
-              >
-                <Icon className="h-4 w-4 shrink-0" strokeWidth={active ? 2.2 : 1.8} />
-                <span className="truncate">{item.label}</span>
-              </Link>
+              <div key={item.href}>
+                {showSection ? (
+                  <p className="px-2.5 pb-1 pt-4 text-[10px] font-semibold uppercase tracking-wider text-subtle-foreground">
+                    {item.section}
+                  </p>
+                ) : null}
+                <Link
+                  href={item.href}
+                  aria-current={active ? "page" : undefined}
+                  className={cn(
+                    "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] font-medium transition-colors",
+                    active
+                      ? "bg-accent-soft text-accent"
+                      : "text-muted-foreground hover:bg-surface-muted hover:text-foreground",
+                  )}
+                >
+                  <Icon className="h-4 w-4 shrink-0" strokeWidth={active ? 2.2 : 1.8} />
+                  <span className="truncate">{item.label}</span>
+                </Link>
+              </div>
             );
           })}
         </nav>

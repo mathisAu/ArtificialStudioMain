@@ -20,15 +20,35 @@ export function NewProjectModal({
   team,
   templates,
   defaultCompanyId,
+  defaultTemplateId,
+  open: controlledOpen,
+  onClose,
 }: {
   companies: CompanySummary[];
   managers: UserSummary[];
   team: UserSummary[];
   templates: { id: string; name: string }[];
   defaultCompanyId?: string;
+  /** Template dat vooraf gekozen staat, bijvoorbeeld vanaf de Templates-pagina. */
+  defaultTemplateId?: string;
+  /**
+   * Geef `open` en `onClose` mee om de modal van buitenaf aan te sturen. Zonder
+   * deze props toont hij zelf een knop "Nieuw project".
+   */
+  open?: boolean;
+  onClose?: () => void;
 }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const controlled = controlledOpen !== undefined;
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlled ? controlledOpen : internalOpen;
+  const setOpen = (value: boolean) => {
+    if (controlled) {
+      if (!value) onClose?.();
+    } else {
+      setInternalOpen(value);
+    }
+  };
   const { submit, pending, error } = useActionForm(createProjectAction, (result) => {
     toast.success(result.success ?? "Project aangemaakt.");
     setOpen(false);
@@ -38,10 +58,12 @@ export function NewProjectModal({
 
   return (
     <>
-      <Button onClick={() => setOpen(true)}>
-        <Plus className="h-4 w-4" />
-        Nieuw project
-      </Button>
+      {controlled ? null : (
+        <Button onClick={() => setOpen(true)}>
+          <Plus className="h-4 w-4" />
+          Nieuw project
+        </Button>
+      )}
 
       <Modal
         open={open}
@@ -163,7 +185,7 @@ export function NewProjectModal({
               htmlFor="template_id"
               hint="Maakt automatisch fases en starttaken aan."
             >
-              <Select id="template_id" name="template_id" defaultValue="">
+              <Select id="template_id" name="template_id" defaultValue={defaultTemplateId ?? ""}>
                 <option value="">Geen template</option>
                 {templates.map((template) => (
                   <option key={template.id} value={template.id}>
