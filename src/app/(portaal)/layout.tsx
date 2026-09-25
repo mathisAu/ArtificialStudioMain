@@ -3,8 +3,8 @@ import type { ReactNode } from "react";
 import { signOutAction } from "../(auth)/actions";
 import { AppShell } from "@/components/layout/app-shell";
 import { CLIENT_NAV } from "@/components/layout/nav-config";
-import { requireClient } from "@/lib/auth";
-import { createClient } from "@/lib/supabase/server";
+import { getAuthUserId, requireClient } from "@/lib/auth";
+import { countUnreadNotifications } from "@/lib/queries/notifications";
 import { readTheme } from "@/lib/theme-server";
 
 /**
@@ -12,15 +12,14 @@ import { readTheme } from "@/lib/theme-server";
  * omgeving (§22, §31).
  */
 export default async function PortalLayout({ children }: { children: ReactNode }) {
-  const user = await requireClient();
-  const theme = await readTheme();
-
-  const supabase = await createClient();
-  const { count: unread } = await supabase
-    .from("notifications")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", user.id)
-    .eq("is_read", false);
+  // Het id komt uit het JWT, dus de teller hoeft niet te wachten op het profiel.
+  // Is er geen sessie, dan stuurt requireClient() je alsnog naar /login.
+  const userId = await getAuthUserId();
+  const [user, theme, unread] = await Promise.all([
+    requireClient(),
+    readTheme(),
+    userId ? countUnreadNotifications(userId) : 0,
+  ]);
 
   return (
     <AppShell
@@ -34,7 +33,7 @@ export default async function PortalLayout({ children }: { children: ReactNode }
         subtitle: user.companyName ?? undefined,
       }}
       accountHref="/portaal/account"
-      unreadNotifications={unread ?? 0}
+      unreadNotifications={unread}
       theme={theme}
       signOut={signOutAction}
     >
