@@ -30,9 +30,6 @@ export default async function PortalDashboardPage() {
     { data: projects },
     { data: actions },
     { data: updates },
-    { count: openQuestions },
-    { count: openFeedback },
-    { count: openInvoices },
     { count: newUpdates },
   ] = await Promise.all([
     supabase
@@ -58,21 +55,6 @@ export default async function PortalDashboardPage() {
       .order("published_at", { ascending: false })
       .limit(5),
     supabase
-      .from("customer_questions")
-      .select("id", { count: "exact", head: true })
-      .eq("company_id", user.companyId)
-      .not("status", "in", "(answered,closed)"),
-    supabase
-      .from("feedback")
-      .select("id", { count: "exact", head: true })
-      .eq("company_id", user.companyId)
-      .not("status", "in", "(resolved,rejected)"),
-    supabase
-      .from("invoices")
-      .select("id", { count: "exact", head: true })
-      .eq("company_id", user.companyId)
-      .in("status", ["open", "overdue"]),
-    supabase
       .from("project_updates")
       .select("id", { count: "exact", head: true })
       .eq("company_id", user.companyId)
@@ -93,7 +75,7 @@ export default async function PortalDashboardPage() {
         description="Hier ziet u de actuele stand van zaken van al uw projecten."
       />
 
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+      <section className="grid gap-3 sm:grid-cols-3">
         <StatCard
           label="Actieve projecten"
           value={active.length}
@@ -106,25 +88,9 @@ export default async function PortalDashboardPage() {
           href="/portaal/acties"
         />
         <StatCard
-          label="Openstaande vragen"
-          value={openQuestions ?? 0}
-          href="/portaal/vragen"
-        />
-        <StatCard
           label="Nieuwe updates"
           value={newUpdates ?? 0}
           hint="Laatste 7 dagen"
-        />
-        <StatCard
-          label="Openstaande feedback"
-          value={openFeedback ?? 0}
-          href="/portaal/feedback"
-        />
-        <StatCard
-          label="Openstaande facturen"
-          value={openInvoices ?? 0}
-          tone={openInvoices ? "warning" : "neutral"}
-          href="/portaal/facturen"
         />
       </section>
 

@@ -6,7 +6,6 @@ import {
   FolderKanban,
   Hammer,
   ListTodo,
-  MessageSquare,
   UserRoundCheck,
 } from "lucide-react";
 import Link from "next/link";
@@ -50,7 +49,7 @@ async function DashboardContent({ userId }: { userId: string }) {
   return (
     <div className="space-y-6">
       {/* KPI-kaarten (§4) */}
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         <StatCard
           label="Actieve projecten"
           value={kpis.activeProjects}
@@ -85,7 +84,6 @@ async function DashboardContent({ userId }: { userId: string }) {
         <StatCard
           label="Openstaande taken"
           value={kpis.openTasks}
-          href="/mijn-taken"
           icon={<ListTodo className="h-4 w-4" />}
         />
         <StatCard
@@ -93,20 +91,6 @@ async function DashboardContent({ userId }: { userId: string }) {
           value={kpis.overdueTasks}
           tone={kpis.overdueTasks > 0 ? "danger" : "neutral"}
           icon={<AlertTriangle className="h-4 w-4" />}
-        />
-        <StatCard
-          label="Openstaande feedback"
-          value={kpis.openFeedback}
-          href="/feedback?open=1"
-          tone={kpis.openFeedback > 0 ? "warning" : "neutral"}
-          icon={<MessageSquare className="h-4 w-4" />}
-        />
-        <StatCard
-          label="Openstaande klantvragen"
-          value={kpis.openQuestions}
-          href="/vragen?status=new"
-          tone={kpis.openQuestions > 0 ? "warning" : "neutral"}
-          icon={<MessageSquare className="h-4 w-4" />}
         />
       </section>
 
@@ -117,14 +101,6 @@ async function DashboardContent({ userId }: { userId: string }) {
             <CardHeader
               title="Mijn taken"
               description="Taken die aan jou zijn toegewezen en nog openstaan."
-              action={
-                <Link
-                  href="/mijn-taken"
-                  className="text-[13px] text-accent hover:underline"
-                >
-                  Alles bekijken
-                </Link>
-              }
             />
             {myTasks.length === 0 ? (
               <EmptyState
@@ -261,8 +237,8 @@ async function DashboardContent({ userId }: { userId: string }) {
 function DashboardSkeleton() {
   return (
     <div className="space-y-6">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        {Array.from({ length: 9 }).map((_, i) => (
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {Array.from({ length: 7 }).map((_, i) => (
           <Skeleton key={i} className="h-[86px]" />
         ))}
       </div>

@@ -1,9 +1,7 @@
-import { Receipt } from "lucide-react";
 import type { Metadata } from "next";
 
 import { EmailForm, SlackForm } from "./integration-forms";
 import { Badge } from "@/components/ui/badge";
-import { buttonClass } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -80,25 +78,6 @@ export default async function IntegrationsPage() {
           </CardBody>
         </Card>
       </div>
-
-      <Card>
-        <CardHeader
-          title="Boekhouding"
-          description="Facturen exporteren voor je boekhoudpakket (§27)."
-        />
-        <CardBody className="space-y-4">
-          <p className="text-[13px] text-muted-foreground">
-            Elke factuur heeft een veld <span className="font-medium">Externe factuur-ID</span>,
-            zodat je de koppeling met je boekhouding kunt vastleggen. Zolang er geen
-            directe API-koppeling is, exporteer je alle facturen als CSV — dat bestand
-            kun je in vrijwel elk boekhoudpakket importeren.
-          </p>
-          <a href="/api/facturen/export" className={buttonClass("secondary", "sm")}>
-            <Receipt className="h-3.5 w-3.5" />
-            Facturen exporteren (CSV)
-          </a>
-        </CardBody>
-      </Card>
 
       <Card>
         <CardHeader

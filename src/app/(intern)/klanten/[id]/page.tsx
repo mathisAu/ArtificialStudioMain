@@ -1,16 +1,12 @@
-import { Globe, Mail, Phone, Receipt, Star, Trash2, Users } from "lucide-react";
+import { Globe, Mail, Phone, Star, Trash2, Users } from "lucide-react";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { deleteContactAction } from "../actions";
-import { InvoiceFormModal } from "../../facturen/invoice-form-modal";
 import { CompanyFormModal } from "../company-form-modal";
 import { ContactFormModal } from "./contact-form-modal";
 import { InviteClientButton } from "./invite-client-button";
 import { ActivityFeed } from "@/components/domain/activity-feed";
-import { DocumentList, type DocumentRow } from "@/components/domain/document-list";
-import { DocumentUploadModal } from "@/components/domain/document-upload-modal";
 import { ProjectList, type ProjectRow } from "@/components/domain/project-list";
 import { StatusBadge } from "@/components/ui/badge";
 import { Card, CardBody, CardHeader, StatCard } from "@/components/ui/card";
@@ -18,24 +14,9 @@ import { Button } from "@/components/ui/button";
 import { DefinitionList, EmptyState, PageHeader } from "@/components/ui/misc";
 import { Tabs } from "@/components/ui/tabs";
 import { isManager, requireInternal } from "@/lib/auth";
-import {
-  ACTIVE_PROJECT_STATUSES,
-  COMPANY_STATUS,
-  FEEDBACK_STATUS,
-  INVOICE_STATUS,
-  PRIORITY,
-  QUESTION_STATUS,
-} from "@/lib/labels";
-import { getCompanyOptions, getProjectOptions } from "@/lib/queries/lookups";
+import { ACTIVE_PROJECT_STATUSES, COMPANY_STATUS } from "@/lib/labels";
 import { createClient } from "@/lib/supabase/server";
-import type {
-  Activity,
-  CompanyStats,
-  CompanyStatus,
-  InvoiceStatus,
-  UserSummary,
-} from "@/lib/types";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import type { Activity, CompanyStats, CompanyStatus, UserSummary } from "@/lib/types";
 
 export async function generateMetadata({
   params,
@@ -51,10 +32,6 @@ export async function generateMetadata({
 const TABS = [
   "overzicht",
   "projecten",
-  "feedback",
-  "vragen",
-  "documenten",
-  "facturen",
   "contactpersonen",
 ] as const;
 type Tab = (typeof TABS)[number];
@@ -216,12 +193,6 @@ export default async function CompanyDetailPage({
         tabs={[
           { value: "overzicht", label: "Overzicht" },
           { value: "projecten", label: "Projecten", count: projects.length },
-          { value: "feedback", label: "Feedback", count: stats?.open_feedback ?? 0 },
-          { value: "vragen", label: "Vragen", count: stats?.open_questions ?? 0 },
-          { value: "documenten", label: "Documenten" },
-          ...(canManage
-            ? [{ value: "facturen", label: "Facturen", count: stats?.open_invoices ?? 0 }]
-            : []),
           { value: "contactpersonen", label: "Contactpersonen", count: contactList.length },
         ]}
       />
@@ -230,21 +201,6 @@ export default async function CompanyDetailPage({
         <div className="space-y-6">
           <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard label="Actieve projecten" value={stats?.active_projects ?? 0} />
-            <StatCard
-              label="Openstaande feedback"
-              value={stats?.open_feedback ?? 0}
-              tone={stats?.open_feedback ? "warning" : "neutral"}
-            />
-            <StatCard
-              label="Openstaande vragen"
-              value={stats?.open_questions ?? 0}
-              tone={stats?.open_questions ? "warning" : "neutral"}
-            />
-            <StatCard
-              label="Openstaande facturen"
-              value={stats?.open_invoices ?? 0}
-              tone={stats?.open_invoices ? "warning" : "neutral"}
-            />
           </section>
 
           <div className="grid gap-6 lg:grid-cols-3">
@@ -316,18 +272,6 @@ export default async function CompanyDetailPage({
             <ProjectList projects={completedProjects} emptyTitle="Nog niets afgerond" />
           </Card>
         </div>
-      ) : null}
-
-      {tab === "feedback" ? <CompanyFeedbackTab companyId={id} /> : null}
-
-      {tab === "vragen" ? <CompanyQuestionsTab companyId={id} /> : null}
-
-      {tab === "documenten" ? (
-        <CompanyDocumentsTab companyId={id} companyName={company.name} />
-      ) : null}
-
-      {tab === "facturen" && canManage ? (
-        <CompanyInvoicesTab companyId={id} />
       ) : null}
 
       {tab === "contactpersonen" ? (
@@ -410,237 +354,5 @@ export default async function CompanyDetailPage({
         </Card>
       ) : null}
     </>
-  );
-}
-
-// -----------------------------------------------------------------------------
-// Feedback van deze klant (§6)
-// -----------------------------------------------------------------------------
-async function CompanyFeedbackTab({ companyId }: { companyId: string }) {
-  const supabase = await createClient();
-
-  const { data: items } = await supabase
-    .from("feedback")
-    .select("id, title, priority, status, created_at, project:projects(name)")
-    .eq("company_id", companyId)
-    .order("created_at", { ascending: false });
-
-  return (
-    <Card>
-      <CardHeader
-        title="Feedback"
-        description="Alle feedback van deze klant, over alle projecten heen."
-      />
-      {(items ?? []).length === 0 ? (
-        <EmptyState
-          title="Nog geen feedback"
-          description="Zodra deze klant feedback indient, verschijnt die hier."
-        />
-      ) : (
-        <ul className="divide-y divide-border">
-          {(items ?? []).map((item) => {
-            const project = Array.isArray(item.project) ? item.project[0] : item.project;
-            return (
-              <li key={item.id}>
-                <Link
-                  href={`/feedback/${item.id}`}
-                  className="flex flex-wrap items-center gap-x-3 gap-y-2 px-5 py-3.5 transition-colors hover:bg-surface-muted/50"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[13px] font-medium">{item.title}</p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      {(project as { name?: string } | null)?.name ?? "—"} ·{" "}
-                      {formatDate(item.created_at)}
-                    </p>
-                  </div>
-                  <StatusBadge map={PRIORITY} value={item.priority} />
-                  <StatusBadge map={FEEDBACK_STATUS} value={item.status} />
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </Card>
-  );
-}
-
-// -----------------------------------------------------------------------------
-// Vragen van deze klant (§6)
-// -----------------------------------------------------------------------------
-async function CompanyQuestionsTab({ companyId }: { companyId: string }) {
-  const supabase = await createClient();
-
-  const { data: items } = await supabase
-    .from("customer_questions")
-    .select("id, subject, status, created_at, project:projects(name)")
-    .eq("company_id", companyId)
-    .order("created_at", { ascending: false });
-
-  return (
-    <Card>
-      <CardHeader title="Vragen" description="Alle vragen van deze klant." />
-      {(items ?? []).length === 0 ? (
-        <EmptyState
-          title="Nog geen vragen"
-          description="Zodra deze klant een vraag stelt, verschijnt die hier."
-        />
-      ) : (
-        <ul className="divide-y divide-border">
-          {(items ?? []).map((item) => {
-            const project = Array.isArray(item.project) ? item.project[0] : item.project;
-            return (
-              <li key={item.id}>
-                <Link
-                  href={`/vragen/${item.id}`}
-                  className="flex flex-wrap items-center gap-x-3 gap-y-2 px-5 py-3.5 transition-colors hover:bg-surface-muted/50"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[13px] font-medium">{item.subject}</p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      {(project as { name?: string } | null)?.name ?? "—"} ·{" "}
-                      {formatDate(item.created_at)}
-                    </p>
-                  </div>
-                  <StatusBadge map={QUESTION_STATUS} value={item.status} />
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </Card>
-  );
-}
-
-// -----------------------------------------------------------------------------
-// Documenten van deze klant (§6, §17)
-// -----------------------------------------------------------------------------
-async function CompanyDocumentsTab({
-  companyId,
-  companyName,
-}: {
-  companyId: string;
-  companyName: string;
-}) {
-  const supabase = await createClient();
-
-  const { data: fileRows } = await supabase
-    .from("files")
-    .select("*, uploader:users!files_uploaded_by_fkey(full_name), project:projects(name)")
-    .eq("company_id", companyId)
-    .order("created_at", { ascending: false });
-
-  const documents: DocumentRow[] = (fileRows ?? []).map((row) => {
-    const uploader = Array.isArray(row.uploader) ? row.uploader[0] : row.uploader;
-    const project = Array.isArray(row.project) ? row.project[0] : row.project;
-    return {
-      ...(row as unknown as DocumentRow),
-      uploaderName: (uploader as { full_name?: string } | null)?.full_name ?? null,
-      projectName: (project as { name?: string } | null)?.name ?? null,
-    };
-  });
-
-  return (
-    <Card>
-      <CardHeader
-        title="Documenten"
-        description="Alle documenten die aan deze klant gekoppeld zijn."
-        action={
-          <DocumentUploadModal
-            companies={[{ id: companyId, name: companyName, status: "active" }]}
-            defaultCompanyId={companyId}
-            label="Toevoegen"
-          />
-        }
-      />
-      <DocumentList documents={documents} canDelete showProject />
-    </Card>
-  );
-}
-
-// -----------------------------------------------------------------------------
-// Facturen van deze klant (§20)
-// -----------------------------------------------------------------------------
-async function CompanyInvoicesTab({ companyId }: { companyId: string }) {
-  const supabase = await createClient();
-
-  const [{ data: invoices }, companies, projects] = await Promise.all([
-    supabase
-      .from("invoices")
-      .select("id, invoice_number, invoice_date, due_date, total_amount, status, project:projects(name)")
-      .eq("company_id", companyId)
-      .order("invoice_date", { ascending: false }),
-    getCompanyOptions(),
-    getProjectOptions(),
-  ]);
-
-  const rows = invoices ?? [];
-  const outstanding = rows
-    .filter((i) => i.status === "open" || i.status === "overdue")
-    .reduce((total, row) => total + Number(row.total_amount ?? 0), 0);
-
-  return (
-    <Card>
-      <CardHeader
-        title="Facturen"
-        description={
-          outstanding > 0
-            ? `${formatCurrency(outstanding)} staat nog open.`
-            : "Alle facturen van deze klant."
-        }
-        action={
-          <InvoiceFormModal
-            companies={companies}
-            projects={projects.map((p) => ({
-              id: p.id,
-              name: p.name,
-              company_id: p.company_id,
-            }))}
-            defaultCompanyId={companyId}
-          />
-        }
-      />
-      {rows.length === 0 ? (
-        <EmptyState
-          title="Nog geen facturen"
-          description="Zodra er gefactureerd wordt, verschijnen de facturen hier."
-          icon={<Receipt className="h-5 w-5" />}
-        />
-      ) : (
-        <ul className="divide-y divide-border">
-          {rows.map((invoice) => {
-            const project = Array.isArray(invoice.project)
-              ? invoice.project[0]
-              : invoice.project;
-            return (
-              <li key={invoice.id}>
-                <Link
-                  href={`/facturen/${invoice.id}`}
-                  className="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-3.5 transition-colors hover:bg-surface-muted/50"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[13px] font-medium tabular-nums">
-                      {invoice.invoice_number}
-                    </p>
-                    <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                      {(project as { name?: string } | null)?.name ?? "Geen project"} ·{" "}
-                      {formatDate(invoice.invoice_date)}
-                    </p>
-                  </div>
-                  <span className="font-medium tabular-nums">
-                    {formatCurrency(Number(invoice.total_amount))}
-                  </span>
-                  <StatusBadge
-                    map={INVOICE_STATUS}
-                    value={invoice.status as InvoiceStatus}
-                  />
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </Card>
   );
 }

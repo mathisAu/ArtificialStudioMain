@@ -11,8 +11,6 @@ export interface DashboardKpis {
   waitingOnClient: number;
   openTasks: number;
   overdueTasks: number;
-  openFeedback: number;
-  openQuestions: number;
   completedThisMonth: number;
 }
 
@@ -79,8 +77,6 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
     waitingOnClient,
     openTasks,
     overdueTasks,
-    openFeedback,
-    openQuestions,
     completedThisMonth,
     myTasksResult,
     projectsResult,
@@ -99,14 +95,6 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
       .select("id", { count: "exact", head: true })
       .neq("status", "done")
       .lt("due_date", today),
-    supabase
-      .from("feedback")
-      .select("id", { count: "exact", head: true })
-      .not("status", "in", "(resolved,rejected)"),
-    supabase
-      .from("customer_questions")
-      .select("id", { count: "exact", head: true })
-      .not("status", "in", "(answered,closed)"),
     supabase
       .from("projects")
       .select("id", { count: "exact", head: true })
@@ -209,8 +197,6 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
       waitingOnClient: waitingOnClient.count ?? 0,
       openTasks: openTasks.count ?? 0,
       overdueTasks: overdueTasks.count ?? 0,
-      openFeedback: openFeedback.count ?? 0,
-      openQuestions: openQuestions.count ?? 0,
       completedThisMonth: completedThisMonth.count ?? 0,
     },
     myTasks: (myTasksResult.data ?? []) as unknown as TaskWithRelations[],

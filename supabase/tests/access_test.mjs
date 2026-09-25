@@ -79,17 +79,6 @@ const admin = await sessionCookie("admin@test.local");
 const devDashboard = await get("/dashboard", developer);
 expect("developer kan het dashboard openen", devDashboard.status === 200, String(devDashboard.status));
 
-// Financiële export: alleen admin en projectmanager (§2).
-const devExport = await get("/api/facturen/export", developer);
-expect(
-  "developer wordt geweigerd bij de factuurexport",
-  devExport.status !== 200,
-  `status ${devExport.status}`,
-);
-
-const adminExport = await get("/api/facturen/export", admin);
-expect("admin mag de factuurexport ophalen", adminExport.status === 200, String(adminExport.status));
-
 // Integratie-instellingen bevatten geheimen: alleen admin.
 const devIntegraties = await get("/instellingen/integraties", developer);
 expect(
@@ -99,7 +88,7 @@ expect(
 );
 
 // De klant hoort helemaal niet in de interne omgeving te komen.
-for (const path of ["/facturen", "/instellingen/integraties", "/api/facturen/export"]) {
+for (const path of ["/dashboard", "/klanten", "/instellingen/integraties"]) {
   const response = await get(path, klant);
   expect(`klant wordt geweigerd bij ${path}`, response.status !== 200, `status ${response.status}`);
 }

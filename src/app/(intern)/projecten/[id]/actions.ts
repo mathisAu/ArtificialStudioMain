@@ -88,7 +88,6 @@ export async function createTaskAction(
   }
 
   revalidatePath(`/projecten/${parsed.data.project_id}`);
-  revalidatePath("/mijn-taken");
   revalidatePath("/dashboard");
   return { success: "Taak aangemaakt.", id: data.id };
 }
@@ -111,7 +110,6 @@ export async function updateTaskAction(
   if (error) return { error: "De wijzigingen konden niet worden opgeslagen." };
 
   revalidatePath(`/projecten/${parsed.data.project_id}`);
-  revalidatePath("/mijn-taken");
   return { success: "Taak bijgewerkt.", id };
 }
 
@@ -140,7 +138,6 @@ export async function moveTaskAction(
   }
 
   revalidatePath(`/projecten/${data.project_id}`);
-  revalidatePath("/mijn-taken");
   revalidatePath("/dashboard");
   return { success: "Taak verplaatst." };
 }
@@ -156,7 +153,6 @@ export async function deleteTaskAction(formData: FormData) {
   await supabase.from("tasks").delete().eq("id", id);
 
   revalidatePath(`/projecten/${projectId}`);
-  revalidatePath("/mijn-taken");
 }
 
 // -----------------------------------------------------------------------------

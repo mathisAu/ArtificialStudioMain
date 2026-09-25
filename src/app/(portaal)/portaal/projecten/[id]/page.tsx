@@ -103,7 +103,7 @@ export default async function PortalProjectPage({
             description={
               actions.length > 0
                 ? "Zodra het onderstaande bij ons binnen is, gaan wij verder."
-                : "Er staat geen concrete actie open. Laat via een vraag of feedback weten hoe u ervoor staat."
+                : "Er staat geen concrete actie open. Wij nemen contact met u op."
             }
           />
           {actions.length > 0 ? (
@@ -131,16 +131,7 @@ export default async function PortalProjectPage({
                 </li>
               ))}
             </ul>
-          ) : (
-            <CardBody className="pt-0">
-              <Link
-                href="/portaal/vragen"
-                className="text-[13px] text-accent hover:underline"
-              >
-                Een vraag stellen
-              </Link>
-            </CardBody>
-          )}
+          ) : null}
         </Card>
       ) : null}
 

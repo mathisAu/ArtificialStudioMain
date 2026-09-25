@@ -103,14 +103,8 @@ function revalidateFor(
   projectId: string | null,
 ) {
   const paths: Record<string, string> = {
-    feedback: `/feedback/${entityId}`,
-    question: `/vragen/${entityId}`,
     customer_action: `/acties/${entityId}`,
   };
 
-  revalidateShared(
-    paths[entityType],
-    projectId ? `/projecten/${projectId}` : null,
-    "/notificaties",
-  );
+  revalidateShared(paths[entityType], projectId ? `/projecten/${projectId}` : null);
 }

@@ -148,10 +148,7 @@ export async function deleteFileAction(formData: FormData) {
  * feedbackpagina: de actie slaagt, maar de pagina komt uit de cache.
  */
 const ENTITY_ROUTES: Record<string, [string] | [string, string]> = {
-  feedback: ["/feedback", "/portaal/feedback"],
-  question: ["/vragen", "/portaal/vragen"],
   customer_action: ["/acties", "/portaal/acties"],
-  invoice: ["/facturen", "/portaal/facturen"],
   project: ["/projecten", "/portaal/projecten"],
   project_update: ["/projecten"],
   task: ["/projecten"],
@@ -169,8 +166,6 @@ function revalidateDocumentPaths(file: {
   entity_type?: string | null;
   entity_id?: string | null;
 }) {
-  revalidatePath("/documenten");
-  revalidatePath("/portaal/documenten");
   revalidatePath("/portaal");
 
   if (file.project_id) {
