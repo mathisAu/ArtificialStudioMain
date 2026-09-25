@@ -19,6 +19,19 @@ export interface SessionUser {
 }
 
 /**
+ * Het gebruikers-id uit het JWT, zonder profielquery. Daardoor kan een layout
+ * andere queries alvast starten terwijl het profiel nog wordt opgehaald.
+ *
+ * `getClaims()` verifieert het JWT lokaal (asymmetric signing keys), zonder
+ * netwerkaanroep naar Auth — veel sneller dan getUser() bij elke request.
+ */
+export const getAuthUserId = cache(async (): Promise<string | null> => {
+  const supabase = await createClient();
+  const { data } = await supabase.auth.getClaims();
+  return data?.claims?.sub ?? null;
+});
+
+/**
  * De ingelogde gebruiker inclusief rol en organisatie.
  *
  * `getClaims()` verifieert het JWT; daarna halen we het profiel op via een
@@ -26,15 +39,10 @@ export interface SessionUser {
  * effect heeft. `cache()` zorgt dat dit één keer per request gebeurt.
  */
 export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
+  const userId = await getAuthUserId();
+  if (!userId) return null;
+
   const supabase = await createClient();
-
-  // getClaims() verifieert het JWT lokaal (asymmetric signing keys), zonder
-  // netwerkaanroep naar Auth — veel sneller dan getUser() bij elke request.
-  const { data } = await supabase.auth.getClaims();
-  const claims = data?.claims;
-
-  if (!claims) return null;
-  const userId = claims.sub;
 
   const { data: profile } = await supabase
     .from("users")

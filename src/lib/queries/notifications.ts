@@ -2,6 +2,19 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { createClient } from "@/lib/supabase/server";
+
+/** Aantal ongelezen notificaties voor de teller in de sidebar. */
+export async function countUnreadNotifications(userId: string): Promise<number> {
+  const supabase = await createClient();
+  const { count } = await supabase
+    .from("notifications")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .eq("is_read", false);
+  return count ?? 0;
+}
+
 /** Tabel per onderwerp waar een notificatie naar kan verwijzen. */
 const ENTITY_TABLES: Record<string, string> = {
   feedback: "feedback",

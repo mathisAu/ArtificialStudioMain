@@ -3,20 +3,19 @@ import type { ReactNode } from "react";
 import { signOutAction } from "../(auth)/actions";
 import { AppShell } from "@/components/layout/app-shell";
 import { INTERNAL_NAV, visibleNav } from "@/components/layout/nav-config";
-import { requireInternal } from "@/lib/auth";
-import { createClient } from "@/lib/supabase/server";
+import { getAuthUserId, requireInternal } from "@/lib/auth";
+import { countUnreadNotifications } from "@/lib/queries/notifications";
 import { readTheme } from "@/lib/theme-server";
 
 export default async function InternalLayout({ children }: { children: ReactNode }) {
-  const user = await requireInternal();
-  const theme = await readTheme();
-
-  const supabase = await createClient();
-  const { count: unread } = await supabase
-    .from("notifications")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", user.id)
-    .eq("is_read", false);
+  // Het id komt uit het JWT, dus de teller hoeft niet te wachten op het profiel.
+  // Is er geen sessie, dan stuurt requireInternal() je alsnog naar /login.
+  const userId = await getAuthUserId();
+  const [user, theme, unread] = await Promise.all([
+    requireInternal(),
+    readTheme(),
+    userId ? countUnreadNotifications(userId) : 0,
+  ]);
 
   return (
     <AppShell
@@ -29,7 +28,7 @@ export default async function InternalLayout({ children }: { children: ReactNode
         avatarUrl: user.avatarUrl,
       }}
       accountHref="/account"
-      unreadNotifications={unread ?? 0}
+      unreadNotifications={unread}
       theme={theme}
       signOut={signOutAction}
     >
