@@ -1,0 +1,209 @@
+@import "tailwindcss";
+
+/* ==========================================================================
+   Designtokens (§37)
+   Minimalistisch, veel witruimte, subtiele borders, rustige kleuren.
+   Eén accentkleur; alle statuskleuren zijn bewust gedempt.
+
+   Het thema volgt standaard de systeeminstelling. Kiest iemand zelf licht of
+   donker, dan zet de server `data-theme` op het <html>-element en wint die
+   keuze van de mediaquery.
+   ========================================================================== */
+
+/* --- Licht: de standaard ------------------------------------------------- */
+:root {
+  color-scheme: light;
+
+  --background: #f7f8fa;
+  --surface: #ffffff;
+  --surface-muted: #f1f3f6;
+  --foreground: #14161a;
+  --muted-foreground: #5b6472;
+  --subtle-foreground: #6f7887;
+  --border: #e3e6eb;
+  --border-strong: #cfd4dd;
+
+  /* Merkkleuren uit het logo: blauwviolet → violet → magenta. */
+  --brand-1: #3d2bde;
+  --brand-2: #9127d4;
+  --brand-3: #ec1d9b;
+  --gradient-brand: linear-gradient(100deg, var(--brand-1), var(--brand-2) 52%, var(--brand-3));
+
+  /* Het middenpunt van het verloop dient als effen accentkleur, zodat tekst en
+     randen leesbaar blijven waar een verloop niet kan. */
+  --accent: #7a2ed8;
+  --accent-hover: #6624bd;
+  --accent-soft: #f3eafd;
+  --accent-foreground: #ffffff;
+
+  --success: #0f7355;
+  --success-soft: #e6f4ef;
+  --warning: #8a5a10;
+  --warning-soft: #fbf1de;
+  --danger: #b02a20;
+  --danger-soft: #fceae8;
+  --info: #3d2bde;
+  --info-soft: #eaeaff;
+  --neutral-soft: #eef0f4;
+
+  --radius: 0.625rem;
+}
+
+/*
+  De donkere waarden staan twee keer: één keer voor wie het systeem volgt en
+  één keer voor wie donker expliciet kiest. CSS kent geen manier om één set
+  variabelen aan twee losse selectors te hangen; dit is de gebruikelijke
+  oplossing. Pas ze dus altijd samen aan.
+*/
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+
+    --background: #0e1013;
+    --surface: #16191e;
+    --surface-muted: #1c2026;
+    --foreground: #e9ebef;
+    --muted-foreground: #9aa1ac;
+    --subtle-foreground: #7c8593;
+    --border: #262a31;
+    --border-strong: #333842;
+
+    --brand-1: #6b5cff;
+    --brand-2: #b45cf0;
+    --brand-3: #ff4fc0;
+    --gradient-brand: linear-gradient(100deg, var(--brand-1), var(--brand-2) 52%, var(--brand-3));
+
+    --accent: #b18af5;
+    --accent-hover: #c4a4f8;
+    --accent-soft: #2a1c46;
+    --accent-foreground: #ffffff;
+
+    --success: #5cc9a7;
+    --success-soft: #12291f;
+    --warning: #e0ab5c;
+    --warning-soft: #2a2113;
+    --danger: #f0837a;
+    --danger-soft: #2e1715;
+    --info: #8f9dff;
+    --info-soft: #1c1f42;
+    --neutral-soft: #22262d;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --background: #0e1013;
+  --surface: #16191e;
+  --surface-muted: #1c2026;
+  --foreground: #e9ebef;
+  --muted-foreground: #9aa1ac;
+  --subtle-foreground: #7c8593;
+  --border: #262a31;
+  --border-strong: #333842;
+
+  --brand-1: #6b5cff;
+  --brand-2: #b45cf0;
+  --brand-3: #ff4fc0;
+  --gradient-brand: linear-gradient(100deg, var(--brand-1), var(--brand-2) 52%, var(--brand-3));
+
+  --accent: #b18af5;
+  --accent-hover: #c4a4f8;
+  --accent-soft: #2a1c46;
+  --accent-foreground: #ffffff;
+
+  --success: #5cc9a7;
+  --success-soft: #12291f;
+  --warning: #e0ab5c;
+  --warning-soft: #2a2113;
+  --danger: #f0837a;
+  --danger-soft: #2e1715;
+  --info: #8f9dff;
+  --info-soft: #1c1f42;
+  --neutral-soft: #22262d;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-foreground: var(--foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-subtle-foreground: var(--subtle-foreground);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-neutral-soft: var(--neutral-soft);
+
+  --radius-base: var(--radius);
+  --font-sans: var(--font-sans-stack);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system,
+      "Segoe UI", Roboto, sans-serif;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection {
+    background: var(--accent-soft);
+  }
+
+  /* Rustige, consistente focusring op alles wat bediend kan worden. */
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  /* Smalle scrollbars binnen panelen en kanban-kolommen. */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
+  }
+}
+
+@layer utilities {
+  /* Het merkverloop als vlak, bijvoorbeeld op de primaire knop. */
+  .bg-brand {
+    background-image: var(--gradient-brand);
+  }
+
+  /* Hetzelfde verloop, maar dan door de letters heen. */
+  .text-brand {
+    background-image: var(--gradient-brand);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+}
