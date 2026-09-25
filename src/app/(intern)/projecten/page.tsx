@@ -43,6 +43,10 @@ export default async function ProjectsPage({
   const params = await searchParams;
   const view = params.weergave === "lijst" ? "lijst" : "bord";
 
+  // De projecten en hun kerncijfers starten meteen, naast de keuzelijsten, in
+  // plaats van pas als die klaar zijn. Dat scheelt twee rondes naar de database.
+  const projectData = loadProjects(params);
+
   const supabase = await createClient();
 
   const [{ data: companies }, { data: users }, { data: templates }] = await Promise.all([
@@ -115,7 +119,7 @@ export default async function ProjectsPage({
         key={JSON.stringify(params)}
         fallback={<TableSkeleton cols={7} rows={8} />}
       >
-        <ProjectsView params={params} view={view} role={user.role} canMove />
+        <ProjectsView data={projectData} params={params} view={view} role={user.role} canMove />
       </Suspense>
     </>
   );
@@ -166,17 +170,8 @@ function ViewSwitch({ view, params }: { view: string; params: ProjectFilters }) 
   );
 }
 
-async function ProjectsView({
-  params,
-  view,
-  role,
-  canMove,
-}: {
-  params: ProjectFilters;
-  view: string;
-  role: UserRole;
-  canMove: boolean;
-}) {
+/** Projecten en hun kerncijfers, zo veel mogelijk tegelijk. */
+async function loadProjects(params: ProjectFilters) {
   const supabase = await createClient();
 
   let query = supabase
@@ -197,42 +192,69 @@ async function ProjectsView({
   if (params.type) query = query.eq("project_type", params.type);
 
   // Filteren op teamlid gaat via de koppeltabel.
+  let noMembership = false;
   if (params.teamlid) {
     const { data: memberships } = await supabase
       .from("project_members")
       .select("project_id")
       .eq("user_id", params.teamlid);
     const ids = (memberships ?? []).map((row) => row.project_id);
-    if (ids.length === 0) {
-      return (
-        <EmptyState
-          title="Geen projecten gevonden"
-          description="Dit teamlid is aan geen enkel project gekoppeld."
-          icon={<FolderKanban className="h-5 w-5" />}
-        />
-      );
-    }
-    query = query.in("id", ids);
+    if (ids.length === 0) noMembership = true;
+    else query = query.in("id", ids);
   }
 
-  const { data, error } = await query;
+  if (noMembership) {
+    return {
+      rows: [],
+      error: null,
+      noMembership,
+      statsById: new Map<string, ProjectStats>(),
+    };
+  }
 
-  if (error) {
+  const [{ data, error }, { data: statsRows }] = await Promise.all([
+    query,
+    supabase.from("project_stats").select("*"),
+  ]);
+
+  return {
+    rows: data ?? [],
+    error: error?.message ?? null,
+    noMembership,
+    statsById: new Map<string, ProjectStats>(
+      (statsRows ?? []).map((row) => [row.project_id, row as ProjectStats]),
+    ),
+  };
+}
+
+async function ProjectsView({
+  data,
+  params,
+  view,
+  role,
+  canMove,
+}: {
+  data: ReturnType<typeof loadProjects>;
+  params: ProjectFilters;
+  view: string;
+  role: UserRole;
+  canMove: boolean;
+}) {
+  const { rows, error, noMembership, statsById } = await data;
+
+  if (noMembership) {
     return (
-      <EmptyState title="Projecten konden niet worden geladen" description={error.message} />
+      <EmptyState
+        title="Geen projecten gevonden"
+        description="Dit teamlid is aan geen enkel project gekoppeld."
+        icon={<FolderKanban className="h-5 w-5" />}
+      />
     );
   }
 
-  const rows = data ?? [];
-  const ids = rows.map((p) => p.id);
-
-  const { data: statsRows } = ids.length
-    ? await supabase.from("project_stats").select("*").in("project_id", ids)
-    : { data: [] as ProjectStats[] };
-
-  const statsById = new Map<string, ProjectStats>(
-    (statsRows ?? []).map((row) => [row.project_id, row as ProjectStats]),
-  );
+  if (error) {
+    return <EmptyState title="Projecten konden niet worden geladen" description={error} />;
+  }
 
   const projects: BoardProject[] = rows.map((p) => {
     const company = Array.isArray(p.company) ? p.company[0] : p.company;

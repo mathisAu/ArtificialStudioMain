@@ -12,7 +12,6 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { Eye, GripVertical, List, Plus, LayoutGrid } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -58,7 +57,6 @@ export function TaskBoard({
   members: UserSummary[];
   canEdit: boolean;
 }) {
-  const router = useRouter();
   // Volgt de server, en wordt tussendoor optimistisch bijgewerkt bij het slepen.
   const [tasks, setTasks] = useSyncedState(initialTasks);
   const [view, setView] = useState<"bord" | "lijst">("bord");
@@ -103,10 +101,9 @@ export function TaskBoard({
     if (result?.error) {
       setTasks(previous);
       toast.error(result.error);
-      return;
     }
-
-    router.refresh();
+    // Bij succes ververst de server-actie de pagina al via revalidatePath; nog
+    // een router.refresh() zou dezelfde pagina een tweede keer ophalen.
   }
 
   const activeTask = tasks.find((t) => t.id === activeId) ?? null;

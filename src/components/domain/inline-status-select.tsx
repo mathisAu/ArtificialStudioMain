@@ -1,7 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useTransition } from "react";
 import { toast } from "sonner";
 
 import { Select } from "@/components/ui/field";
@@ -36,10 +34,8 @@ export function InlineStatusSelect<T extends string>({
   ariaLabel?: string;
   className?: string;
 }) {
-  const router = useRouter();
   // Volgt automatisch de waarde die de server teruggeeft.
   const [current, setCurrent] = useSyncedState<T>(value);
-  const [isPending, startTransition] = useTransition();
 
   const entries = (Object.entries(map) as [T, LabelDef][]).sort(
     (a, b) => a[1].order - b[1].order,
@@ -56,15 +52,15 @@ export function InlineStatusSelect<T extends string>({
       return;
     }
 
+    // De server-actie ververst de pagina zelf via revalidatePath.
     toast.success(`Status gewijzigd naar "${map[next].label}".`);
-    startTransition(() => router.refresh());
   }
 
   return (
     <Select
       aria-label={ariaLabel}
       value={current}
-      disabled={disabled || isPending}
+      disabled={disabled}
       onChange={(event) => onChange(event.target.value as T)}
       className={cn("w-auto min-w-[170px]", className)}
     >

@@ -26,6 +26,7 @@ export interface TaskActionState {
  */
 function revalidateTaskViews(projectId: string | null | undefined) {
   if (projectId) revalidatePath(`/projecten/${projectId}`);
+  else revalidatePath("/projecten/[id]", "page");
   revalidatePath("/board");
   revalidatePath("/kalender");
   revalidatePath("/rapporten");
